@@ -17,7 +17,8 @@ RUN addgroup -S portfolio && adduser -S portfolio -G portfolio
 WORKDIR /app
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
+RUN mkdir -p ./public
+COPY --from=builder /app/public/ ./public/
 ENV PORT=3000
 ENV READINESS_CHECK_PATH=/api/health
 ENV NODE_ENV=production
