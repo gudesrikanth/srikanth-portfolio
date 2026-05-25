@@ -13,27 +13,30 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Srikanth Gude — Cloud-Native Full Stack Engineer',
+  title: 'Srikanth Gude — Senior Software Engineer | Cloud-Native & AI',
   description:
-    'Cloud-Native Full Stack Engineer with 8+ years building distributed systems, AI-powered applications, and scalable backend platforms. Specializing in Java/Spring Boot, AWS, Kubernetes, and event-driven microservices.',
+    'Senior Software Engineer · Cloud-Native Backend · Microservices & API Development · AI & Generative Agents. Building distributed systems with Java/Spring Boot, AWS, Kubernetes, and modern LLM agent frameworks.',
   keywords: [
     'Srikanth Gude',
-    'Cloud Engineer',
-    'Full Stack Engineer',
+    'Senior Software Engineer',
+    'Cloud-Native',
+    'Backend Engineer',
+    'Microservices',
+    'API Development',
+    'AI Agents',
+    'Generative AI',
     'Java',
     'Spring Boot',
     'AWS',
     'Kubernetes',
     'Terraform',
-    'Microservices',
     'Distributed Systems',
-    'AI Applications',
   ],
   authors: [{ name: 'Srikanth Gude' }],
   openGraph: {
-    title: 'Srikanth Gude — Cloud-Native Full Stack Engineer',
+    title: 'Srikanth Gude — Senior Software Engineer | Cloud-Native & AI',
     description:
-      'Cloud-Native Full Stack Engineer with 8+ years building distributed systems, AI-powered applications, and scalable backend platforms.',
+      'Senior Software Engineer · Cloud-Native Backend · Microservices & API Development · AI & Generative Agents.',
     type: 'website',
   },
 };
@@ -45,7 +48,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
       </body>
     </html>

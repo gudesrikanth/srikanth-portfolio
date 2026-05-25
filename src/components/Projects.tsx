@@ -1,6 +1,15 @@
 'use client';
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { FolderGit2, ExternalLink, Sparkle } from 'lucide-react';
+
+function GithubIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+    </svg>
+  );
+}
 
 interface Project {
   title: string;
@@ -11,6 +20,7 @@ interface Project {
 
 interface FeaturedProject {
   title: string;
+  tagline: string;
   description: string;
   highlights: string[];
   tags: string[];
@@ -19,6 +29,7 @@ interface FeaturedProject {
 
 const FEATURED: FeaturedProject = {
   title: 'SwiftLink',
+  tagline: 'Serverless URL shortener — Java 25, AWS Lambda, DynamoDB',
   description:
     'A fully production-ready URL shortening platform featuring click analytics, custom short codes, and TTL-based expiration. Built with Java 25 and Spring Boot 3.5 deployed as a container on AWS Lambda via the Lambda Web Adapter pattern. Infrastructure managed entirely through Terraform with a complete CI/CD pipeline on GitHub Actions.',
   highlights: [
@@ -28,7 +39,15 @@ const FEATURED: FeaturedProject = {
     'Full IaC: ECR, IAM, Lambda, API Gateway v2, CloudWatch alarms — all in Terraform modules',
     'Async click recording via @Async thread pool — redirect response never waits on analytics',
   ],
-  tags: ['Java 25', 'Spring Boot 3.5', 'AWS Lambda', 'DynamoDB', 'Terraform', 'GitHub Actions', 'Docker'],
+  tags: [
+    'Java 25',
+    'Spring Boot 3.5',
+    'AWS Lambda',
+    'DynamoDB',
+    'Terraform',
+    'GitHub Actions',
+    'Docker',
+  ],
   githubUrl: 'https://github.com/gudesrikanth/swiftlink',
 };
 
@@ -53,21 +72,16 @@ const OTHER_PROJECTS: Project[] = [
   },
 ];
 
-function GitHubIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-    </svg>
-  );
-}
-
-function FolderIcon() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
+const reveal = {
+  hidden: { opacity: 0, y: 32, filter: 'blur(6px)', scale: 0.98 },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    scale: 1,
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
 
 function SmallCard({ project, index }: { project: Project; index: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -76,41 +90,49 @@ function SmallCard({ project, index }: { project: Project; index: number }) {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="group flex flex-col bg-navy-light border border-navy-lighter rounded-lg p-6 hover:border-green/40 hover:-translate-y-1 transition-all duration-300"
+      variants={reveal}
+      initial="hidden"
+      animate={inView ? 'show' : 'hidden'}
+      transition={{ delay: index * 0.08 }}
+      className="group relative rounded-2xl overflow-hidden"
     >
-      {/* Top row */}
-      <div className="flex items-start justify-between mb-5">
-        <div className="text-green/70 group-hover:text-green transition-colors duration-300">
-          <FolderIcon />
+      <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-accent-emerald/50 via-accent-cyan/50 to-accent-violet/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="relative glass rounded-2xl p-6 h-full flex flex-col hover:-translate-y-1 transition-transform duration-300">
+        <div className="flex items-start justify-between mb-5">
+          <div className="w-11 h-11 rounded-xl bg-gradient-accent-soft border border-white/10 flex items-center justify-center">
+            <FolderGit2 className="w-5 h-5 text-accent-emerald" />
+          </div>
+          {project.githubUrl && (
+            <a
+              href={project.githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-accent-emerald transition-colors"
+              aria-label="GitHub"
+            >
+              <GithubIcon className="w-5 h-5" />
+            </a>
+          )}
         </div>
-        {project.githubUrl && (
-          <a
-            href={project.githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-slate hover:text-green transition-colors duration-200"
-            aria-label="GitHub"
-          >
-            <GitHubIcon />
-          </a>
-        )}
-      </div>
 
-      <h3 className="text-slate-lightest font-semibold text-lg mb-3 group-hover:text-green transition-colors duration-200">
-        {project.title}
-      </h3>
+        <h3 className="text-slate-100 font-semibold text-lg mb-3 group-hover:text-accent-emerald transition-colors">
+          {project.title}
+        </h3>
 
-      <p className="text-slate text-sm leading-relaxed flex-1 mb-6">{project.description}</p>
+        <p className="text-slate-400 text-sm leading-relaxed flex-1 mb-5">
+          {project.description}
+        </p>
 
-      <div className="flex flex-wrap gap-2 mt-auto">
-        {project.tags.map((tag) => (
-          <span key={tag} className="font-mono text-xs text-slate">
-            {tag}
-          </span>
-        ))}
+        <div className="flex flex-wrap gap-2 mt-auto">
+          {project.tags.map((tag) => (
+            <span
+              key={tag}
+              className="font-mono text-[11px] text-slate-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
       </div>
     </motion.div>
   );
@@ -121,119 +143,133 @@ export default function Projects() {
   const inView = useInView(ref, { once: true, margin: '-80px' });
 
   return (
-    <section id="projects" ref={ref} className="py-24 md:py-32 bg-navy">
+    <section id="projects" ref={ref} className="relative py-24 md:py-32">
       <div className="max-w-6xl mx-auto px-6 md:px-12">
-        {/* Section heading */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
-          className="flex items-center gap-4 mb-16"
+          variants={reveal}
+          initial="hidden"
+          animate={inView ? 'show' : 'hidden'}
+          className="flex items-center gap-4 mb-14"
         >
-          <span className="font-mono text-green text-xl">03.</span>
-          <h2 className="text-3xl font-bold text-slate-lightest">Projects</h2>
-          <div className="flex-1 h-px bg-navy-lighter max-w-xs ml-4" />
+          <span className="font-mono text-accent-cyan text-xl">03.</span>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-100">Projects</h2>
+          <div className="flex-1 h-px bg-gradient-to-r from-slate-700 to-transparent max-w-sm ml-4" />
         </motion.div>
 
-        {/* Featured project */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-20"
+          variants={reveal}
+          initial="hidden"
+          animate={inView ? 'show' : 'hidden'}
+          transition={{ delay: 0.1 }}
+          className="relative mb-20 rounded-3xl overflow-hidden"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-8 items-center">
-            {/* Text side */}
-            <div className="lg:order-1">
-              <p className="font-mono text-green text-sm mb-2">Featured Project</p>
-              <h3 className="text-slate-lightest text-2xl font-bold mb-4">{FEATURED.title}</h3>
-
-              <div className="bg-navy-light border border-navy-lighter rounded-lg p-6 mb-4">
-                <p className="text-slate text-sm leading-relaxed">{FEATURED.description}</p>
-              </div>
-
-              <ul className="space-y-2 mb-6">
-                {FEATURED.highlights.map((h) => (
-                  <li key={h} className="flex items-start gap-2 text-slate text-sm">
-                    <span className="text-green mt-0.5 flex-shrink-0">▹</span>
-                    {h}
-                  </li>
-                ))}
-              </ul>
-
-              <div className="flex flex-wrap gap-3 mb-6">
-                {FEATURED.tags.map((tag) => (
-                  <span key={tag} className="font-mono text-xs text-slate">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              {FEATURED.githubUrl && (
-                <a
-                  href={FEATURED.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-slate hover:text-green transition-colors duration-200"
-                >
-                  <GitHubIcon />
-                  <span className="text-sm">View on GitHub</span>
-                </a>
-              )}
-            </div>
-
-            {/* Terminal window side */}
-            <div className="lg:order-2 mt-8 lg:mt-0">
-              <div className="rounded-lg bg-navy-light border border-navy-lighter overflow-hidden shadow-xl shadow-navy/50">
-                {/* Terminal header */}
-                <div className="px-4 py-3 border-b border-navy-lighter flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-400/60" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
-                  <div className="w-3 h-3 rounded-full bg-green/60" />
-                  <span className="font-mono text-xs text-slate ml-2">swiftlink ~ demo</span>
+          <div className="absolute -inset-px rounded-3xl bg-gradient-to-br from-accent-emerald/40 via-accent-cyan/30 to-accent-violet/40 opacity-70" />
+          <div className="relative glass-strong rounded-3xl p-8 md:p-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkle className="w-4 h-4 text-accent-emerald" />
+                  <p className="font-mono text-accent-emerald text-sm">Featured Project</p>
                 </div>
-                {/* Terminal body */}
+                <h3 className="text-slate-100 text-3xl md:text-4xl font-bold mb-2">
+                  {FEATURED.title}
+                </h3>
+                <p className="text-slate-400 mb-6">{FEATURED.tagline}</p>
+
+                <p className="text-slate-300 text-sm leading-relaxed mb-6">
+                  {FEATURED.description}
+                </p>
+
+                <ul className="space-y-2 mb-6">
+                  {FEATURED.highlights.map((h) => (
+                    <li
+                      key={h}
+                      className="flex items-start gap-2.5 text-slate-400 text-sm"
+                    >
+                      <span className="text-accent-cyan mt-1 flex-shrink-0">▹</span>
+                      <span>{h}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {FEATURED.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="font-mono text-[11px] text-slate-300 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                {FEATURED.githubUrl && (
+                  <a
+                    href={FEATURED.githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-medium text-sm text-ink-950 bg-gradient-to-r from-accent-emerald via-accent-cyan to-accent-violet shadow-lg shadow-accent-violet/30 hover:shadow-accent-cyan/40 transition-shadow"
+                  >
+                    <GithubIcon className="w-4 h-4" />
+                    View on GitHub
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+
+              <div className="rounded-2xl overflow-hidden border border-white/10 bg-ink-900/60">
+                <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-rose-400/70" />
+                  <div className="w-3 h-3 rounded-full bg-amber-400/70" />
+                  <div className="w-3 h-3 rounded-full bg-accent-emerald/80" />
+                  <span className="font-mono text-xs text-slate-400 ml-2">
+                    swiftlink ~ demo
+                  </span>
+                </div>
                 <div className="p-5 font-mono text-xs space-y-1.5">
                   <div>
-                    <span className="text-green">$</span>
-                    <span className="text-slate-light"> curl -X POST /api/shorten</span>
+                    <span className="text-accent-emerald">$</span>
+                    <span className="text-slate-200"> curl -X POST /api/shorten</span>
                   </div>
-                  <div className="pl-4 text-slate">
+                  <div className="pl-4 text-slate-400">
                     {'{'}
-                    <span className="text-slate-light">&quot;url&quot;</span>:{' '}
-                    <span className="text-green">&quot;https://long-url.example.com/...&quot;</span>
+                    <span className="text-accent-cyan">&quot;url&quot;</span>:{' '}
+                    <span className="text-accent-violet">
+                      &quot;https://long-url.example.com/...&quot;
+                    </span>
                     {'}'}
                   </div>
-                  <div className="mt-2 text-slate">
-                    <span className="text-green">200 OK</span> · 8ms
+                  <div className="mt-2 text-slate-400">
+                    <span className="text-accent-emerald">200 OK</span> · 8ms
                   </div>
-                  <div className="pl-4 text-slate">
+                  <div className="pl-4 text-slate-400">
                     {'{'}
-                    <span className="text-slate-light">&quot;shortCode&quot;</span>:{' '}
-                    <span className="text-green">&quot;xK9mP2&quot;</span>,
+                    <span className="text-accent-cyan">&quot;shortCode&quot;</span>:{' '}
+                    <span className="text-accent-violet">&quot;xK9mP2&quot;</span>,
                   </div>
-                  <div className="pl-4 text-slate">
-                    <span className="text-slate-light">&quot;shortUrl&quot;</span>:{' '}
-                    <span className="text-green">&quot;https://swlnk.io/xK9mP2&quot;</span>
+                  <div className="pl-4 text-slate-400">
+                    <span className="text-accent-cyan">&quot;shortUrl&quot;</span>:{' '}
+                    <span className="text-accent-violet">
+                      &quot;https://swlnk.io/xK9mP2&quot;
+                    </span>
                   </div>
-                  <div className="pl-4 text-slate">{'}'}</div>
+                  <div className="pl-4 text-slate-400">{'}'}</div>
                   <div className="mt-3">
-                    <span className="text-green">$</span>
-                    <span className="text-slate-light"> curl /api/stats/xK9mP2</span>
+                    <span className="text-accent-emerald">$</span>
+                    <span className="text-slate-200"> curl /api/stats/xK9mP2</span>
                   </div>
-                  <div className="pl-4 text-slate">
+                  <div className="pl-4 text-slate-400">
                     {'{'}
-                    <span className="text-slate-light">&quot;clicks&quot;</span>:{' '}
-                    <span className="text-green">1_247</span>,
+                    <span className="text-accent-cyan">&quot;clicks&quot;</span>:{' '}
+                    <span className="text-accent-violet">1_247</span>,
                   </div>
-                  <div className="pl-4 text-slate">
-                    <span className="text-slate-light">&quot;p99Latency&quot;</span>:{' '}
-                    <span className="text-green">&quot;&lt;1ms&quot;</span>
+                  <div className="pl-4 text-slate-400">
+                    <span className="text-accent-cyan">&quot;p99Latency&quot;</span>:{' '}
+                    <span className="text-accent-violet">&quot;&lt;1ms&quot;</span>
                   </div>
-                  <div className="pl-4 text-slate">{'}'}</div>
-                  <div className="mt-3 text-slate">
-                    <span className="text-slate-light"># </span>
-                    <span className="text-slate">Caffeine cache hit — DynamoDB not touched</span>
+                  <div className="pl-4 text-slate-400">{'}'}</div>
+                  <div className="mt-3 text-slate-500">
+                    # Caffeine cache hit — DynamoDB not touched
                   </div>
                 </div>
               </div>
@@ -241,12 +277,11 @@ export default function Projects() {
           </div>
         </motion.div>
 
-        {/* Other projects grid */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={inView ? { opacity: 1 } : {}}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="font-mono text-green text-sm text-center mb-8"
+          className="font-mono text-accent-emerald text-sm text-center mb-8"
         >
           Other Noteworthy Projects
         </motion.p>
