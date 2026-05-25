@@ -28,6 +28,11 @@ locals {
   }
 }
 
+import {
+  to = module.ecr.aws_ecr_repository.this
+  id = "srikanth-portfolio-dev"
+}
+
 module "ecr" {
   source          = "../../modules/ecr"
   repository_name = local.name_prefix
