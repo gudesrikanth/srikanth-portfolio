@@ -1,28 +1,15 @@
 'use client';
-
-import { motion } from 'framer-motion';
-import { useInView } from 'framer-motion';
 import { useRef } from 'react';
+import { motion, useInView } from 'framer-motion';
 
 interface SkillGroup {
   title: string;
-  icon: React.ReactNode;
   skills: string[];
 }
 
 const SKILL_GROUPS: SkillGroup[] = [
   {
     title: 'Backend & Distributed Systems',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <rect x="2" y="3" width="20" height="4" rx="1" />
-        <rect x="2" y="10" width="20" height="4" rx="1" />
-        <rect x="2" y="17" width="20" height="4" rx="1" />
-        <circle cx="6" cy="5" r="1" fill="currentColor" />
-        <circle cx="6" cy="12" r="1" fill="currentColor" />
-        <circle cx="6" cy="19" r="1" fill="currentColor" />
-      </svg>
-    ),
     skills: [
       'Java 21+',
       'Spring Boot 3',
@@ -38,12 +25,6 @@ const SKILL_GROUPS: SkillGroup[] = [
   },
   {
     title: 'Frontend',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <polyline points="16 18 22 12 16 6" />
-        <polyline points="8 6 2 12 8 18" />
-      </svg>
-    ),
     skills: [
       'React',
       'Next.js 15',
@@ -57,13 +38,8 @@ const SKILL_GROUPS: SkillGroup[] = [
   },
   {
     title: 'Cloud / DevOps / Infrastructure',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-      </svg>
-    ),
     skills: [
-      'AWS (Lambda, ECS, DynamoDB, API Gateway)',
+      'AWS (Lambda, ECS, DynamoDB)',
       'Azure',
       'GCP',
       'Docker',
@@ -77,11 +53,6 @@ const SKILL_GROUPS: SkillGroup[] = [
   },
   {
     title: 'Data / Messaging / Observability',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-      </svg>
-    ),
     skills: [
       'PostgreSQL',
       'MongoDB',
@@ -98,35 +69,20 @@ const SKILL_GROUPS: SkillGroup[] = [
 
 export default function Skills() {
   const ref = useRef<HTMLElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const inView = useInView(ref, { once: true, margin: '-80px' });
 
   return (
-    <section
-      id="skills"
-      ref={ref}
-      className="py-24 md:py-32"
-      style={{ background: 'var(--background)' }}
-    >
-      <div className="max-w-6xl mx-auto px-6">
+    <section id="skills" ref={ref} className="py-24 md:py-32 bg-navy-light">
+      <div className="max-w-6xl mx-auto px-6 md:px-12">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5 }}
+          className="flex items-center gap-4 mb-16"
         >
-          <span
-            className="text-sm font-medium tracking-widest uppercase"
-            style={{ color: 'var(--accent)' }}
-          >
-            Skills
-          </span>
-          <h2 className="text-3xl md:text-4xl font-bold mt-3" style={{ color: 'var(--foreground)' }}>
-            Technology stack
-          </h2>
-          <p className="mt-4 text-base max-w-xl" style={{ color: 'var(--foreground-muted)' }}>
-            A curated set of tools I reach for when building scalable, observable, and
-            maintainable systems.
-          </p>
+          <span className="font-mono text-green text-xl">02.</span>
+          <h2 className="text-3xl font-bold text-slate-lightest">Skills</h2>
+          <div className="flex-1 h-px bg-navy-lighter max-w-xs ml-4" />
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -134,61 +90,25 @@ export default function Skills() {
             <motion.div
               key={group.title}
               initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: groupIndex * 0.1 }}
-              className="rounded-xl p-6"
-              style={{
-                background: 'var(--background-card)',
-                border: '1px solid var(--border)',
-              }}
+              className="rounded-lg bg-navy border border-navy-lighter p-6 hover:border-green/30 transition-colors duration-300"
             >
-              <div className="flex items-center gap-3 mb-5">
-                <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: 'var(--accent-glow)',
-                    color: 'var(--accent)',
-                  }}
-                >
-                  {group.icon}
-                </div>
-                <h3
-                  className="text-base font-semibold"
-                  style={{ color: 'var(--foreground)' }}
-                >
-                  {group.title}
-                </h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
+              <h3 className="font-mono text-green text-sm mb-5 font-medium">{group.title}</h3>
+              <ul className="space-y-2">
                 {group.skills.map((skill, i) => (
-                  <motion.span
+                  <motion.li
                     key={skill}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={isInView ? { opacity: 1, scale: 1 } : {}}
-                    transition={{ duration: 0.3, delay: groupIndex * 0.1 + i * 0.03 }}
-                    className="text-xs font-medium px-3 py-1.5 rounded-md transition-all duration-200"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--foreground-muted)',
-                    }}
-                    onMouseEnter={(e) => {
-                      const el = e.currentTarget as HTMLSpanElement;
-                      el.style.borderColor = 'var(--border-accent)';
-                      el.style.color = 'var(--accent)';
-                      el.style.background = 'var(--accent-glow)';
-                    }}
-                    onMouseLeave={(e) => {
-                      const el = e.currentTarget as HTMLSpanElement;
-                      el.style.borderColor = 'var(--border)';
-                      el.style.color = 'var(--foreground-muted)';
-                      el.style.background = 'rgba(255,255,255,0.04)';
-                    }}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={inView ? { opacity: 1, x: 0 } : {}}
+                    transition={{ duration: 0.3, delay: groupIndex * 0.1 + i * 0.04 }}
+                    className="flex items-center gap-2 text-slate text-sm hover:text-slate-light transition-colors duration-200"
                   >
+                    <span className="text-green text-xs flex-shrink-0">▹</span>
                     {skill}
-                  </motion.span>
+                  </motion.li>
                 ))}
-              </div>
+              </ul>
             </motion.div>
           ))}
         </div>

@@ -1,196 +1,104 @@
 'use client';
-
 import { motion } from 'framer-motion';
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.15,
-      delayChildren: 0.2,
-    },
-  },
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: 'easeOut' },
-  },
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.15, delayChildren: 0.3 } },
 };
 
 export default function Hero() {
   return (
-    <section
-      id="hero"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1424 50%, #0a0f1e 100%)' }}
-    >
-      {/* Background grid pattern */}
+    <section id="hero" className="relative min-h-screen flex items-center bg-navy overflow-hidden">
+      {/* Subtle dot grid */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0"
         style={{
-          backgroundImage:
-            'linear-gradient(var(--accent) 1px, transparent 1px), linear-gradient(90deg, var(--accent) 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
+          backgroundImage: 'radial-gradient(rgba(100,255,218,0.08) 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
         }}
       />
-
-      {/* Radial glow */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 80% 50% at 50% 50%, rgba(6, 182, 212, 0.06) 0%, transparent 70%)',
-        }}
-      />
+      {/* Radial fade over grid */}
+      <div className="absolute inset-0 bg-gradient-to-b from-navy via-transparent to-navy" />
 
       <motion.div
-        variants={containerVariants}
+        variants={container}
         initial="hidden"
-        animate="visible"
-        className="relative z-10 max-w-4xl mx-auto px-6 text-center"
+        animate="show"
+        className="relative z-10 max-w-6xl mx-auto px-6 md:px-12 pt-32 pb-24"
       >
-        <motion.div variants={itemVariants}>
-          <span
-            className="inline-block text-sm font-medium tracking-widest uppercase mb-6"
-            style={{ color: 'var(--accent)' }}
-          >
-            Available for new opportunities
-          </span>
-        </motion.div>
+        <motion.p variants={item} className="font-mono text-green text-base mb-5">
+          Hi, my name is
+        </motion.p>
 
         <motion.h1
-          variants={itemVariants}
-          className="text-5xl md:text-7xl font-bold leading-tight mb-6"
-          style={{ color: 'var(--foreground)' }}
+          variants={item}
+          className="text-5xl sm:text-7xl md:text-8xl font-bold text-slate-lightest leading-tight mb-3"
         >
-          Srikanth{' '}
-          <span
-            style={{
-              background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            Gude
-          </span>
+          Srikanth Gude.
         </motion.h1>
 
-        <motion.p
-          variants={itemVariants}
-          className="text-xl md:text-2xl font-medium mb-4"
-          style={{ color: 'var(--foreground-muted)' }}
+        <motion.h2
+          variants={item}
+          className="text-4xl sm:text-6xl md:text-7xl font-bold text-slate leading-tight mb-8"
         >
-          Cloud-Native Full Stack Engineer
-        </motion.p>
+          I build things for the cloud.
+        </motion.h2>
 
         <motion.p
-          variants={itemVariants}
-          className="text-base md:text-lg mb-4"
-          style={{ color: 'rgba(148, 163, 184, 0.7)' }}
+          variants={item}
+          className="max-w-lg text-slate text-lg leading-relaxed mb-12"
         >
-          Distributed Systems &bull; AI-Powered Applications
+          Cloud-Native Full Stack Engineer with 8+ years designing production systems — from
+          event-driven microservices and Kubernetes platforms to{' '}
+          <span className="text-green">AI-powered applications</span> and serverless architectures.
         </motion.p>
 
-        <motion.p
-          variants={itemVariants}
-          className="max-w-2xl mx-auto text-base md:text-lg mb-12 leading-relaxed"
-          style={{ color: 'var(--foreground-muted)' }}
-        >
-          8+ years designing and shipping production systems at scale — from event-driven
-          microservices and cloud infrastructure to LLM-powered applications and
-          platform engineering.
-        </motion.p>
-
-        <motion.div
-          variants={itemVariants}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
-        >
-          <a
-            href="#projects"
-            onClick={(e) => {
-              e.preventDefault();
-              document.querySelector('#projects')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-lg font-semibold text-base transition-all duration-200"
-            style={{
-              background: 'var(--accent)',
-              color: '#0a0f1e',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = 'var(--accent-hover)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = 'var(--accent)';
-            }}
+        <motion.div variants={item} className="flex flex-wrap gap-4">
+          <button
+            onClick={() =>
+              document.querySelector('#projects')?.scrollIntoView({ behavior: 'smooth' })
+            }
+            className="font-mono text-green border border-green rounded px-7 py-4 text-sm hover:bg-green-tint transition-all duration-200"
           >
-            View Projects
-          </a>
-          <a
-            href="#contact"
-            onClick={(e) => {
-              e.preventDefault();
-              document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-lg font-semibold text-base transition-all duration-200"
-            style={{
-              border: '1px solid var(--border-accent)',
-              color: 'var(--accent)',
-              background: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = 'var(--accent-glow)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
-            }}
+            Check out my work
+          </button>
+          <button
+            onClick={() =>
+              document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })
+            }
+            className="font-mono text-slate-light text-sm px-7 py-4 hover:text-green transition-colors duration-200"
           >
-            Get in Touch
-          </a>
+            Get in touch →
+          </button>
         </motion.div>
 
-        <motion.div
-          variants={itemVariants}
-          className="mt-16 flex items-center justify-center gap-8"
-        >
-          {['Java / Spring Boot', 'AWS / Kubernetes', 'AI Agents'].map((tag) => (
-            <span
-              key={tag}
-              className="text-xs font-medium px-3 py-1 rounded-full"
-              style={{
-                background: 'rgba(6, 182, 212, 0.08)',
-                border: '1px solid var(--border-accent)',
-                color: 'var(--accent)',
-              }}
-            >
-              {tag}
-            </span>
+        {/* Stats row */}
+        <motion.div variants={item} className="mt-20 flex flex-wrap gap-10">
+          {[
+            { n: '8+', label: 'Years experience' },
+            { n: '3', label: 'Cloud platforms' },
+            { n: '50+', label: 'Production services' },
+          ].map(({ n, label }) => (
+            <div key={label}>
+              <div className="font-mono text-3xl font-bold text-green">{n}</div>
+              <div className="text-slate text-sm mt-1">{label}</div>
+            </div>
           ))}
         </motion.div>
       </motion.div>
 
-      {/* Scroll indicator */}
+      {/* Scroll hint */}
       <motion.div
-        className="absolute bottom-10 left-1/2 -translate-x-1/2"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
         animate={{ y: [0, 8, 0] }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: 2, repeat: Infinity }}
       >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth="2"
-          opacity="0.5"
-        >
-          <path d="M12 5v14M5 12l7 7 7-7" />
-        </svg>
+        <div className="w-px h-16 bg-gradient-to-b from-transparent to-green/40" />
       </motion.div>
     </section>
   );
