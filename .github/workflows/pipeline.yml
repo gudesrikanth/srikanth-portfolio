@@ -31,6 +31,8 @@ env:
   PROD_ECR: srikanth-portfolio-prod
   DEV_LAMBDA: srikanth-portfolio-dev
   PROD_LAMBDA: srikanth-portfolio-prod
+  # Opt JS-based actions into Node 24 ahead of the 2026-06-16 default flip
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   # ─── 1.1 ──────────────────────────────────────────────────────────────────
@@ -83,7 +85,7 @@ jobs:
           ignore-unfixed: true
       - name: Upload SARIF to GitHub Security
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results.sarif'
 
