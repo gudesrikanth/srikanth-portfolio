@@ -67,10 +67,18 @@ export default function Navbar() {
       <nav className="max-w-6xl mx-auto px-6 md:px-12 h-20 flex items-center justify-between">
         <button
           onClick={() => scrollTo('#hero')}
-          className="font-mono text-lg font-bold tracking-wider"
+          className="group relative"
           aria-label="Home"
         >
-          <span className="text-gradient">SG</span>
+          <span className="block p-[1.5px] rounded-xl bg-gradient-to-br from-accent-emerald via-accent-cyan to-accent-violet shadow-md shadow-accent-violet/25 transition-all duration-300 group-hover:shadow-accent-cyan/40 group-hover:-translate-y-px">
+            <span className="flex items-center justify-center w-11 h-11 rounded-[10px] bg-ink-950/95 backdrop-blur">
+              <span className="font-bold text-base tracking-tight text-gradient">SG</span>
+            </span>
+          </span>
+          <span
+            aria-hidden
+            className="absolute -inset-1 rounded-xl bg-gradient-to-br from-accent-emerald/30 via-accent-cyan/30 to-accent-violet/30 blur-md opacity-0 group-hover:opacity-100 transition-opacity -z-10"
+          />
         </button>
 
         <ul className="hidden md:flex items-center gap-1">
