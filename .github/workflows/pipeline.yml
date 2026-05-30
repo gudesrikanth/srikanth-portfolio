@@ -14,7 +14,7 @@ on:
         options: [dev, prod]
         required: true
       promote_image_tag:
-        description: '(prod only) Dev image tag to promote, e.g. dev-abc1234. Leave empty to build fresh.'
+        description: '(prod only) Dev image tag to promote, e.g. dev-abc1234. Empty = build fresh.'
         required: false
 
 permissions:
@@ -27,11 +27,15 @@ concurrency:
 
 env:
   AWS_REGION: us-east-1
+  DEV_ECR: srikanth-portfolio-dev
+  PROD_ECR: srikanth-portfolio-prod
+  DEV_LAMBDA: srikanth-portfolio-dev
+  PROD_LAMBDA: srikanth-portfolio-prod
 
 jobs:
-  # ─── Always: lint + types + build ──────────────────────────────────────────
-  ci:
-    name: Lint • Typecheck • Build
+  # ─── 1 ────────────────────────────────────────────────────────────────────
+  build-test-scan:
+    name: 1. Build • Test • Scan
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -40,20 +44,15 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run type-check
-      - run: npm run build
-
-  # ─── Always: Trivy filesystem scan ─────────────────────────────────────────
-  security-scan:
-    name: Security Scan (Trivy)
-    runs-on: ubuntu-latest
-    needs: ci
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - name: Trivy scan
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type-check
+        run: npm run type-check
+      - name: Build
+        run: npm run build
+      - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
@@ -67,18 +66,9 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
-
-  # ─── PR only: validate the Dockerfile builds ───────────────────────────────
-  docker-validate:
-    name: Docker Build (PR validate)
-    runs-on: ubuntu-latest
-    needs: ci
-    if: github.event_name == 'pull_request'
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - name: Validate Dockerfile (PR only — build, no push)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: false
@@ -89,29 +79,40 @@ jobs:
           provenance: false
           sbom: false
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # DEV: push main/develop  → build → deploy → tests
-  # ────────────────────────────────────────────────────────────────────────────
-  build-and-push-dev:
-    name: Build & Push (dev)
+  # ─── 2 ────────────────────────────────────────────────────────────────────
+  docker-build-push:
+    name: 2. Docker Build & Push (ECR)
     runs-on: ubuntu-latest
-    needs: ci
-    if: |
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.target == 'dev')
+    needs: build-test-scan
+    if: github.event_name != 'pull_request'
     timeout-minutes: 20
-    env:
-      ECR_REPOSITORY: srikanth-portfolio-dev
     outputs:
+      target: ${{ steps.meta.outputs.target }}
       image_tag: ${{ steps.meta.outputs.image_tag }}
+      ecr_repo: ${{ steps.meta.outputs.ecr_repo }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build
+      - id: meta
+        name: Resolve target, ECR repo, and image tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TARGET=prod; ECR="$PROD_ECR"; TAG="prod-${{ github.ref_name }}"
+          elif [[ "${{ github.event_name }}" == workflow_dispatch && "${{ inputs.target }}" == prod ]]; then
+            TARGET=prod; ECR="$PROD_ECR"
+            if [[ -n "${{ inputs.promote_image_tag }}" ]]; then
+              TAG="prod-promoted-${{ inputs.promote_image_tag }}"
+            else
+              TAG="prod-${SHORT_SHA}"
+            fi
+          else
+            TARGET=dev; ECR="$DEV_ECR"; TAG="dev-${SHORT_SHA}"
+          fi
+          echo "target=$TARGET"     >> "$GITHUB_OUTPUT"
+          echo "ecr_repo=$ECR"      >> "$GITHUB_OUTPUT"
+          echo "image_tag=$TAG"     >> "$GITHUB_OUTPUT"
+          echo "Resolved → target=$TARGET ecr=$ECR tag=$TAG"
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -119,40 +120,65 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      - name: Ensure ECR repo
+
+      - name: Ensure ECR repo exists
         run: |
-          aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" \
+          ECR="${{ steps.meta.outputs.ecr_repo }}"
+          aws ecr describe-repositories --repository-names "$ECR" \
             --region "$AWS_REGION" 2>/dev/null || \
           aws ecr create-repository \
-            --repository-name "$ECR_REPOSITORY" \
+            --repository-name "$ECR" \
             --region "$AWS_REGION" \
             --encryption-configuration encryptionType=AES256 \
             --image-scanning-configuration "scanOnPush=true"
-      - id: meta
-        run: echo "image_tag=dev-$(echo "${{ github.sha }}" | cut -c1-8)" >> "$GITHUB_OUTPUT"
+
+      - name: Promote dev image → prod ECR (no rebuild)
+        if: github.event_name == 'workflow_dispatch' && inputs.target == 'prod' && inputs.promote_image_tag != ''
+        run: |
+          REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+          SOURCE="${REGISTRY}/${DEV_ECR}:${{ inputs.promote_image_tag }}"
+          TARGET="${REGISTRY}/${PROD_ECR}:${{ steps.meta.outputs.image_tag }}"
+          docker pull "$SOURCE"
+          docker tag "$SOURCE" "$TARGET"
+          docker push "$TARGET"
+          docker tag "$SOURCE" "${REGISTRY}/${PROD_ECR}:prod-latest"
+          docker push "${REGISTRY}/${PROD_ECR}:prod-latest"
+
+      - uses: actions/setup-node@v4
+        if: github.event_name != 'workflow_dispatch' || inputs.promote_image_tag == ''
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install + build (fresh-build path)
+        if: github.event_name != 'workflow_dispatch' || inputs.promote_image_tag == ''
+        run: |
+          npm ci
+          npm run build
       - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+        if: github.event_name != 'workflow_dispatch' || inputs.promote_image_tag == ''
+      - name: Build & push image
+        if: github.event_name != 'workflow_dispatch' || inputs.promote_image_tag == ''
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.image_tag }}
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:dev-latest
+            ${{ steps.login-ecr.outputs.registry }}/${{ steps.meta.outputs.ecr_repo }}:${{ steps.meta.outputs.image_tag }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ steps.meta.outputs.ecr_repo }}:${{ steps.meta.outputs.target }}-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
           sbom: false
 
+  # ─── 3 ────────────────────────────────────────────────────────────────────
   deploy-dev:
-    name: Deploy → Lambda (dev)
+    name: 3. Deploy → Lambda (dev)
     runs-on: ubuntu-latest
-    needs: build-and-push-dev
+    needs: docker-build-push
+    if: needs.docker-build-push.outputs.target == 'dev'
     timeout-minutes: 10
     environment: dev
-    env:
-      ECR_REPOSITORY: srikanth-portfolio-dev
-      LAMBDA_FUNCTION: srikanth-portfolio-dev
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -163,33 +189,31 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
       - name: Update Lambda image
         run: |
-          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${{ needs.build-and-push-dev.outputs.image_tag }}"
+          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${DEV_ECR}:${{ needs.docker-build-push.outputs.image_tag }}"
           aws lambda update-function-code \
-            --function-name "$LAMBDA_FUNCTION" \
+            --function-name "$DEV_LAMBDA" \
             --image-uri "$IMAGE_URI" \
             --architectures x86_64
       - name: Wait for update
-        run: aws lambda wait function-updated --function-name "$LAMBDA_FUNCTION"
+        run: aws lambda wait function-updated --function-name "$DEV_LAMBDA"
       - name: Smoke test
         run: |
           API_URL=$(aws apigatewayv2 get-apis \
-            --query "Items[?Name=='${LAMBDA_FUNCTION}'].ApiEndpoint | [0]" \
+            --query "Items[?Name=='${DEV_LAMBDA}'].ApiEndpoint | [0]" \
             --output text)
           for i in 1 2 3 4 5; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/api/health" || echo "000")
             [ "$STATUS" = "200" ] && exit 0
-            echo "Attempt $i: status=$STATUS, retrying in 10s..."
             sleep 10
           done
           exit 1
 
+  # ─── 4 ────────────────────────────────────────────────────────────────────
   functional-tests-dev:
-    name: Functional Tests (dev)
+    name: 4. Functional Tests (dev)
     runs-on: ubuntu-latest
     needs: deploy-dev
     timeout-minutes: 10
-    env:
-      LAMBDA_FUNCTION: srikanth-portfolio-dev
     steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
@@ -200,18 +224,17 @@ jobs:
       - id: api-url
         run: |
           URL=$(aws apigatewayv2 get-apis \
-            --query "Items[?Name=='${LAMBDA_FUNCTION}'].ApiEndpoint | [0]" \
+            --query "Items[?Name=='${DEV_LAMBDA}'].ApiEndpoint | [0]" \
             --output text)
           echo "url=${URL}" >> "$GITHUB_OUTPUT"
       - run: bash scripts/test-dev.sh --url "${{ steps.api-url.outputs.url }}"
 
+  # ─── 5 ────────────────────────────────────────────────────────────────────
   e2e-tests-dev:
-    name: E2E Tests (dev)
+    name: 5. E2E Tests (dev)
     runs-on: ubuntu-latest
     needs: deploy-dev
     timeout-minutes: 15
-    env:
-      LAMBDA_FUNCTION: srikanth-portfolio-dev
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -228,7 +251,7 @@ jobs:
       - id: api-url
         run: |
           URL=$(aws apigatewayv2 get-apis \
-            --query "Items[?Name=='${LAMBDA_FUNCTION}'].ApiEndpoint | [0]" \
+            --query "Items[?Name=='${DEV_LAMBDA}'].ApiEndpoint | [0]" \
             --output text)
           echo "url=${URL}" >> "$GITHUB_OUTPUT"
       - env:
@@ -241,104 +264,15 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # PROD: push tag v*.*.*  → build → deploy → tests
-  #       OR  workflow_dispatch target=prod (optional promotion of dev image)
-  # ────────────────────────────────────────────────────────────────────────────
-  build-and-push-prod:
-    name: Build & Push (prod)
-    runs-on: ubuntu-latest
-    needs: ci
-    if: |
-      startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'workflow_dispatch' && inputs.target == 'prod' && inputs.promote_image_tag == '')
-    timeout-minutes: 20
-    env:
-      ECR_REPOSITORY: srikanth-portfolio-prod
-    outputs:
-      image_tag: ${{ steps.meta.outputs.image_tag }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      - id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-      - id: meta
-        run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "image_tag=prod-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "image_tag=prod-$(echo "${{ github.sha }}" | cut -c1-8)" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64
-          tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.image_tag }}
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:prod-latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: false
-          sbom: false
-
-  promote-dev-to-prod:
-    name: Promote dev image → prod ECR
-    runs-on: ubuntu-latest
-    needs: ci
-    if: github.event_name == 'workflow_dispatch' && inputs.target == 'prod' && inputs.promote_image_tag != ''
-    timeout-minutes: 10
-    outputs:
-      image_tag: ${{ steps.promote.outputs.image_tag }}
-    steps:
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      - id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-      - id: promote
-        run: |
-          REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-          SOURCE="${REGISTRY}/srikanth-portfolio-dev:${{ inputs.promote_image_tag }}"
-          PROD_TAG="prod-promoted-${{ inputs.promote_image_tag }}"
-          TARGET="${REGISTRY}/srikanth-portfolio-prod:${PROD_TAG}"
-          docker pull "$SOURCE"
-          docker tag "$SOURCE" "$TARGET"
-          docker push "$TARGET"
-          docker tag "$SOURCE" "${REGISTRY}/srikanth-portfolio-prod:prod-latest"
-          docker push "${REGISTRY}/srikanth-portfolio-prod:prod-latest"
-          echo "image_tag=${PROD_TAG}" >> "$GITHUB_OUTPUT"
-
+  # ─── 6 ────────────────────────────────────────────────────────────────────
   deploy-prod:
-    name: Deploy → Lambda (prod)
+    name: 6. Deploy → Lambda (prod)
     runs-on: ubuntu-latest
-    needs: [build-and-push-prod, promote-dev-to-prod]
-    if: |
-      always() &&
-      (needs.build-and-push-prod.result == 'success' || needs.promote-dev-to-prod.result == 'success')
+    needs: docker-build-push
+    if: needs.docker-build-push.outputs.target == 'prod'
     timeout-minutes: 15
     environment: prod
-    env:
-      ECR_REPOSITORY: srikanth-portfolio-prod
-      LAMBDA_FUNCTION: srikanth-portfolio-prod
     steps:
-      - id: resolve
-        run: |
-          TAG="${{ needs.build-and-push-prod.outputs.image_tag || needs.promote-dev-to-prod.outputs.image_tag }}"
-          echo "image_tag=${TAG}" >> "$GITHUB_OUTPUT"
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -348,17 +282,17 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
       - name: Update Lambda image
         run: |
-          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${{ steps.resolve.outputs.image_tag }}"
+          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${PROD_ECR}:${{ needs.docker-build-push.outputs.image_tag }}"
           aws lambda update-function-code \
-            --function-name "$LAMBDA_FUNCTION" \
+            --function-name "$PROD_LAMBDA" \
             --image-uri "$IMAGE_URI" \
             --architectures x86_64
       - name: Wait for update
-        run: aws lambda wait function-updated --function-name "$LAMBDA_FUNCTION"
+        run: aws lambda wait function-updated --function-name "$PROD_LAMBDA"
       - name: Smoke test
         run: |
           API_URL=$(aws apigatewayv2 get-apis \
-            --query "Items[?Name=='${LAMBDA_FUNCTION}'].ApiEndpoint | [0]" \
+            --query "Items[?Name=='${PROD_LAMBDA}'].ApiEndpoint | [0]" \
             --output text)
           for i in 1 2 3 4 5; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/api/health" || echo "000")
@@ -367,13 +301,12 @@ jobs:
           done
           exit 1
 
+  # ─── 7 ────────────────────────────────────────────────────────────────────
   functional-tests-prod:
-    name: Functional Tests (prod)
+    name: 7. Functional Tests (prod)
     runs-on: ubuntu-latest
     needs: deploy-prod
     timeout-minutes: 10
-    env:
-      LAMBDA_FUNCTION: srikanth-portfolio-prod
     steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
@@ -384,18 +317,17 @@ jobs:
       - id: api-url
         run: |
           URL=$(aws apigatewayv2 get-apis \
-            --query "Items[?Name=='${LAMBDA_FUNCTION}'].ApiEndpoint | [0]" \
+            --query "Items[?Name=='${PROD_LAMBDA}'].ApiEndpoint | [0]" \
             --output text)
           echo "url=${URL}" >> "$GITHUB_OUTPUT"
       - run: bash scripts/test-dev.sh --url "${{ steps.api-url.outputs.url }}"
 
+  # ─── 8 ────────────────────────────────────────────────────────────────────
   e2e-tests-prod:
-    name: E2E Tests (prod)
+    name: 8. E2E Tests (prod)
     runs-on: ubuntu-latest
     needs: deploy-prod
     timeout-minutes: 15
-    env:
-      LAMBDA_FUNCTION: srikanth-portfolio-prod
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -412,7 +344,7 @@ jobs:
       - id: api-url
         run: |
           URL=$(aws apigatewayv2 get-apis \
-            --query "Items[?Name=='${LAMBDA_FUNCTION}'].ApiEndpoint | [0]" \
+            --query "Items[?Name=='${PROD_LAMBDA}'].ApiEndpoint | [0]" \
             --output text)
           echo "url=${URL}" >> "$GITHUB_OUTPUT"
       - env:

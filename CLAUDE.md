@@ -72,7 +72,7 @@ One unified `pipeline.yml` handles every app deploy path; infra has its own file
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| pipeline.yml | PR / push to main/develop / push tag v*.*.* / workflow_dispatch | lint + type-check + build → Trivy scan. PR also runs a Docker-validate. Push main/develop → ECR → Lambda dev → functional + Playwright tests. Tag v*.*.* or dispatch(target=prod) → ECR → Lambda prod (env approval) → functional + Playwright tests. Dispatch with `promote_image_tag` re-tags a dev image into prod ECR instead of rebuilding. |
+| pipeline.yml | PR / push to main/develop / push tag v*.*.* / workflow_dispatch | 8 numbered jobs chained via `needs:`. **1. Build • Test • Scan** (lint+typecheck+npm build+Trivy SARIF, plus Dockerfile validate on PRs) → **2. Docker Build & Push (ECR)** (selects dev or prod target from event/ref) → **3. Deploy → Lambda (dev)** → **4. Functional Tests (dev)** → **5. E2E Tests (dev)** → **6. Deploy → Lambda (prod)** (env approval) → **7. Functional Tests (prod)** → **8. E2E Tests (prod)**. PR runs only #1. Push main/develop runs 1-5. Tag v*.*.* or dispatch(target=prod) runs 1, 2, 6, 7, 8. Dispatch with `promote_image_tag` re-tags an existing dev image into prod ECR (step 2 skips the rebuild). |
 | infra-bootstrap.yml | workflow_dispatch | one-time S3 + DynamoDB lock table |
 | infra-dev.yml | PR paths, workflow_dispatch | terraform plan/apply/destroy — dev |
 | infra-prod.yml | PR paths, workflow_dispatch | terraform plan/apply/destroy — prod |
