@@ -47,3 +47,8 @@ infra/**/terraform.tfvars
 *.pem
 *.key
 secrets/
+
+# Playwright
+playwright-report/
+test-results/
+playwright/.cache/

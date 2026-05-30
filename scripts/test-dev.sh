@@ -57,6 +57,28 @@ assert_json_field() {
   fi
 }
 
+assert_header_contains() {
+  local label="$1" header="$2" pattern="$3" url="$4"
+  local actual
+  actual=$(curl -s -o /dev/null -D - "$url" | grep -i "^${header}:" | tr -d '\r' | head -1)
+  if echo "$actual" | grep -qi "$pattern"; then
+    pass "$label — $actual"
+  else
+    fail "$label — expected '$header' to contain '$pattern', got '$actual'"
+  fi
+}
+
+assert_body_not_contains() {
+  local label="$1" pattern="$2" url="$3"
+  local body
+  body=$(curl -s "$url")
+  if echo "$body" | grep -q "$pattern"; then
+    fail "$label — unexpected '$pattern' found in response"
+  else
+    pass "$label — '$pattern' absent"
+  fi
+}
+
 # ─── Tests ───────────────────────────────────────────────────────────────────
 echo ""
 echo "════════════════════════════════════════════"
@@ -89,6 +111,15 @@ echo "── Project content ─────────────────
 
 assert_body_contains "SwiftLink project present"  "SwiftLink" "$BASE_URL/"
 assert_body_contains "Lambda mentioned"           "Lambda" "$BASE_URL/"
+
+echo ""
+echo "── Avatar proxy ────────────────────────────"
+
+assert_status         "avatar proxy returns 200"        "200" "$BASE_URL/api/avatar"
+assert_header_contains "avatar serves image content"    "Content-Type" "image/" "$BASE_URL/api/avatar"
+assert_header_contains "avatar is cacheable"            "Cache-Control" "max-age" "$BASE_URL/api/avatar"
+assert_body_contains  "home references /api/avatar"     "/api/avatar" "$BASE_URL/"
+assert_body_not_contains "home hides github avatar url" "avatars.githubusercontent.com" "$BASE_URL/"
 
 echo ""
 echo "── Not found ───────────────────────────────"

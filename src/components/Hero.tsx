@@ -2,7 +2,7 @@
 import { useRef, useEffect, MouseEvent } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, ChevronDown } from 'lucide-react';
+import { ArrowRight, Sparkles, ChevronDown, ShieldCheck } from 'lucide-react';
 import AuroraBackground from './AuroraBackground';
 import MagneticButton from './MagneticButton';
 import { useTypewriter } from './useTypewriter';
@@ -155,15 +155,34 @@ export default function Hero() {
                     'conic-gradient(from 90deg, #10b981, #06b6d4, #8b5cf6, #d946ef, #10b981)',
                 }}
               />
-              <div className="absolute inset-[10px] rounded-full overflow-hidden border border-white/10">
+              <div
+                className="absolute inset-[10px] rounded-full overflow-hidden border border-white/10 select-none"
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
+              >
                 <Image
-                  src="https://avatars.githubusercontent.com/u/22870886?v=4"
+                  src="/api/avatar"
                   alt="Srikanth Gude"
                   fill
                   priority
+                  unoptimized
+                  draggable={false}
                   sizes="(max-width: 768px) 240px, 340px"
-                  className="object-cover"
+                  className="object-cover pointer-events-none"
                 />
+              </div>
+              <div
+                aria-hidden
+                className="absolute inset-[10px] rounded-full z-10"
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
+              />
+              <div
+                aria-label="Protected profile photo"
+                title="Protected profile photo"
+                className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 z-20 flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-accent-cyan to-accent-violet shadow-lg shadow-accent-violet/40 ring-2 ring-ink-950"
+              >
+                <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
               </div>
             </div>
           </motion.div>
