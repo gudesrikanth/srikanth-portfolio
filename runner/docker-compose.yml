@@ -1,0 +1,24 @@
+services:
+  runner:
+    build: .
+    image: srikanth-portfolio-runner:latest
+    container_name: gh-runner
+    restart: unless-stopped
+    init: true
+    environment:
+      REPO_URL: ${REPO_URL:-https://github.com/gudesrikanth/srikanth-portfolio}
+      RUNNER_NAME: ${RUNNER_NAME:-laptop}
+      RUNNER_LABELS: ${RUNNER_LABELS:-self-hosted,playwright}
+      GITHUB_PAT: ${GITHUB_PAT}
+    volumes:
+      - playwright-cache:/home/runner/.cache/ms-playwright
+      - npm-cache:/home/runner/.npm
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+
+volumes:
+  playwright-cache:
+  npm-cache:

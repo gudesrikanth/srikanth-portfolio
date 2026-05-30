@@ -74,6 +74,9 @@ One unified `pipeline.yml` handles every app deploy path; infra has its own file
 |---|---|---|
 | pipeline.yml | PR / push to main/develop / push tag v*.*.* / workflow_dispatch | Jobs chained via `needs:`. **1. Build-Test-Scan** is a reusable workflow (`_build-test-scan.yml`) that expands in the UI to parallel children **Build**, **Test (Lint + Type-check)**, **Security Scan (Trivy)**, and **Dockerfile Validate** (PR only). Then **2. Docker Build & Push (ECR)** (selects dev/prod target from event/ref) → **3. Deploy → Lambda (dev)** → **4. Functional Tests (dev)** → **5. E2E Tests (dev)** → **6. Deploy → Lambda (prod)** (depends on 4 and 5, env approval) → **7. Functional Tests (prod)** → **8. E2E Tests (prod)**. PR runs only #1 (with Dockerfile validate child). Push main/develop runs 1 → 2 → 3 → 4, 5. Tag v*.*.* or dispatch(target=prod) runs 1 → 2 → 6 → 7, 8. Dispatch with `promote_image_tag` re-tags an existing dev image into prod ECR (step 2 skips the rebuild). |
 | _build-test-scan.yml | workflow_call (from pipeline.yml) | Reusable workflow. Fans out to 3-4 parallel children: Build (npm build), Test (lint + type-check), Security Scan (Trivy SARIF), Dockerfile Validate (only when caller sets `include_dockerfile_validate: true`). |
+
+## Self-hosted runner (optional)
+`runner/` holds a Docker setup that registers an ephemeral self-hosted runner on the user's laptop, labelled `self-hosted,playwright`. Intended for the `5. E2E Tests (dev)` job — caches Playwright browsers between runs. Not enabled by default; user flips `runs-on:` for that job to `[self-hosted, playwright]` and starts the container when they want it. See `runner/README.md` for PAT setup and the public-repo fork-PR safety toggle.
 | infra-bootstrap.yml | workflow_dispatch | one-time S3 + DynamoDB lock table |
 | infra-dev.yml | PR paths, workflow_dispatch | terraform plan/apply/destroy — dev |
 | infra-prod.yml | PR paths, workflow_dispatch | terraform plan/apply/destroy — prod |
