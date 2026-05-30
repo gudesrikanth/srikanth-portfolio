@@ -65,17 +65,19 @@ npm run type-check   # tsc --noEmit
 bash scripts/test-dev.sh --url <api-gateway-url>
 ```
 Checks: health 200 + status=UP, home 200, content sections, SwiftLink project, 404 path.
-Runs as the final job in deploy-dev.yml and deploy-prod.yml (needs: deploy).
+Runs as `functional-tests-dev` / `functional-tests-prod` in pipeline.yml (needs: deploy-*).
 
 ## CI/CD workflows
+One unified `pipeline.yml` handles every app deploy path; infra has its own files.
+
 | Workflow | Trigger | What it does |
 |---|---|---|
-| ci.yml | push/PR to main/develop | lint + type-check + build |
-| deploy-dev.yml | push to main/develop | npm build → Docker → ECR → Lambda → functional tests |
-| deploy-prod.yml | push tag v*.*.* or workflow_dispatch | build or promote dev image, env approval gate |
+| pipeline.yml | PR / push to main/develop / push tag v*.*.* / workflow_dispatch | lint + type-check + build → Trivy scan. PR also runs a Docker-validate. Push main/develop → ECR → Lambda dev → functional + Playwright tests. Tag v*.*.* or dispatch(target=prod) → ECR → Lambda prod (env approval) → functional + Playwright tests. Dispatch with `promote_image_tag` re-tags a dev image into prod ECR instead of rebuilding. |
 | infra-bootstrap.yml | workflow_dispatch | one-time S3 + DynamoDB lock table |
 | infra-dev.yml | PR paths, workflow_dispatch | terraform plan/apply/destroy — dev |
 | infra-prod.yml | PR paths, workflow_dispatch | terraform plan/apply/destroy — prod |
+
+Top-level `permissions:` grants `security-events: write` so Trivy can upload SARIF to GitHub code scanning. Concurrency group `pipeline-${{ github.ref }}` cancels redundant PR runs but lets deploys serialize.
 
 ## Docker build pattern
 Multi-stage: `deps` (npm ci) → `builder` (npm run build) → `lambda-adapter` → `runtime` (node:22-alpine).
@@ -90,7 +92,7 @@ Non-root user `portfolio` in runtime stage.
 1. Add AWS credential secrets to GitHub
 2. Run `infra-bootstrap` workflow → copy TF_STATE_BUCKET + TF_LOCK_TABLE as secrets
 3. Run `infra-dev` → action: apply (bootstraps ECR, pushes placeholder, full apply)
-4. Push to main → deploy-dev runs automatically
+4. Push to main → `pipeline.yml` builds, deploys to dev Lambda, and runs functional + Playwright tests automatically
 
 ## Conventions
 - No comments unless WHY is non-obvious
