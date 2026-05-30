@@ -14,13 +14,21 @@ test.describe('Navbar — smooth scroll to sections', () => {
 
   for (const section of SECTIONS) {
     test(`clicking ${section.label} scrolls into view`, async ({ page }) => {
-      await page.getByRole('button', { name: new RegExp(`0\\d\\.\\s*${section.label}`) }).click();
+      await page
+        .locator('header')
+        .getByRole('button', { name: section.label, exact: true })
+        .first()
+        .click();
       await expect(page.locator(`#${section.id}`)).toBeInViewport({ ratio: 0.1 });
     });
   }
 
   test('SG logo scrolls back to hero', async ({ page }) => {
-    await page.getByRole('button', { name: /0\d\.\s*Contact/ }).click();
+    await page
+      .locator('header')
+      .getByRole('button', { name: 'Contact', exact: true })
+      .first()
+      .click();
     await expect(page.locator('#contact')).toBeInViewport({ ratio: 0.1 });
 
     await page.getByRole('button', { name: 'Home' }).click();

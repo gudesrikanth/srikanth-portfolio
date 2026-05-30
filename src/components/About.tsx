@@ -34,9 +34,10 @@ export default function About() {
           animate={inView ? 'show' : 'hidden'}
           className="flex items-center gap-4 mb-14"
         >
-          <span className="font-mono text-accent-cyan text-xl">01.</span>
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-100">About Me</h2>
-          <div className="flex-1 h-px bg-gradient-to-r from-slate-700 to-transparent max-w-sm ml-4" />
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+            <span className="text-gradient">About Me</span>
+          </h2>
+          <div className="flex-1 h-px bg-gradient-to-r from-accent-cyan/60 via-accent-violet/40 to-transparent max-w-sm ml-4" />
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16">

@@ -48,7 +48,7 @@ export default function Contact() {
           <div className="relative glass-strong rounded-3xl p-10 md:p-14">
             <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-6">
               <MessageSquare className="w-3.5 h-3.5 text-accent-cyan" />
-              <span className="font-mono text-xs text-slate-300">04. What&apos;s next</span>
+              <span className="font-mono text-xs text-slate-300">What&apos;s next</span>
             </div>
 
             <h2 className="text-4xl md:text-5xl font-bold mb-5">

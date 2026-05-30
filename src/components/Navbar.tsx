@@ -73,23 +73,22 @@ export default function Navbar() {
           <span className="text-gradient">SG</span>
         </button>
 
-        <ul className="hidden md:flex items-center gap-2">
-          {NAV_LINKS.map((link, i) => (
+        <ul className="hidden md:flex items-center gap-1">
+          {NAV_LINKS.map((link) => (
             <li key={link.href}>
               <button
                 onClick={() => scrollTo(link.href)}
-                className={`relative font-mono text-sm px-3 py-2 rounded-full transition-colors ${
+                className={`relative font-medium text-[0.95rem] tracking-wide px-4 py-2 rounded-full transition-colors ${
                   active === link.id
                     ? 'text-accent-emerald'
-                    : 'text-slate-300 hover:text-accent-emerald'
+                    : 'text-slate-200 hover:text-accent-emerald'
                 }`}
               >
-                <span className="text-accent-cyan mr-1">0{i + 1}.</span>
                 {link.label}
                 {active === link.id && (
                   <motion.span
                     layoutId="nav-pill"
-                    className="absolute inset-0 -z-10 rounded-full bg-white/5 border border-white/10"
+                    className="absolute inset-0 -z-10 rounded-full bg-accent-emerald/10 border border-accent-emerald/30 shadow-[0_0_18px_-4px_rgba(16,185,129,0.45)]"
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -143,15 +142,12 @@ export default function Navbar() {
             transition={{ duration: 0.3 }}
             className="md:hidden fixed inset-0 top-20 glass-strong flex flex-col items-center justify-center gap-8"
           >
-            {NAV_LINKS.map((link, i) => (
+            {NAV_LINKS.map((link) => (
               <button
                 key={link.href}
                 onClick={() => scrollTo(link.href)}
-                className="font-mono text-xl text-slate-100 hover:text-accent-emerald transition-colors"
+                className="font-semibold text-2xl text-slate-100 hover:text-accent-emerald transition-colors"
               >
-                <span className="text-accent-cyan text-sm block text-center mb-1">
-                  0{i + 1}.
-                </span>
                 {link.label}
               </button>
             ))}
