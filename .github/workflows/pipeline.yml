@@ -33,25 +33,45 @@ env:
   PROD_LAMBDA: srikanth-portfolio-prod
 
 jobs:
-  # ─── 1 ────────────────────────────────────────────────────────────────────
-  build-test-scan:
-    name: 1. Build • Test • Scan
+  # ─── 1.1 ──────────────────────────────────────────────────────────────────
+  build:
+    name: 1.1 Build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
-      - name: Install
-        run: npm ci
+      - run: npm ci
+      - name: Next.js build
+        run: npm run build
+
+  # ─── 1.2 ──────────────────────────────────────────────────────────────────
+  test:
+    name: 1.2 Test (Lint + Type-check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
       - name: Lint
         run: npm run lint
       - name: Type-check
         run: npm run type-check
-      - name: Build
-        run: npm run build
+
+  # ─── 1.3 ──────────────────────────────────────────────────────────────────
+  scan:
+    name: 1.3 Security Scan (Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -66,9 +86,17 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
-      - name: Validate Dockerfile (PR only — build, no push)
-        if: github.event_name == 'pull_request'
-        uses: docker/build-push-action@v6
+
+  # ─── 1.4 (PR only) ────────────────────────────────────────────────────────
+  dockerfile-validate:
+    name: 1.4 Dockerfile Validate (PR)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
         with:
           context: .
           push: false
@@ -83,7 +111,7 @@ jobs:
   docker-build-push:
     name: 2. Docker Build & Push (ECR)
     runs-on: ubuntu-latest
-    needs: build-test-scan
+    needs: [build, test, scan]
     if: github.event_name != 'pull_request'
     timeout-minutes: 20
     outputs:
