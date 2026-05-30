@@ -268,8 +268,12 @@ jobs:
   deploy-prod:
     name: 6. Deploy → Lambda (prod)
     runs-on: ubuntu-latest
-    needs: docker-build-push
-    if: needs.docker-build-push.outputs.target == 'prod'
+    needs: [docker-build-push, functional-tests-dev, e2e-tests-dev]
+    if: |
+      always() &&
+      needs.docker-build-push.outputs.target == 'prod' &&
+      (needs.functional-tests-dev.result == 'success' || needs.functional-tests-dev.result == 'skipped') &&
+      (needs.e2e-tests-dev.result == 'success' || needs.e2e-tests-dev.result == 'skipped')
     timeout-minutes: 15
     environment: prod
     steps:
